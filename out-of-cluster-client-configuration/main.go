@@ -2,16 +2,15 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
-	"path/filepath"
 	"time"
 
+	flag "github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
+	ccApi "k8s.io/client-go/tools/clientcmd/api"
 	//
 	// Uncomment to load all auth plugins
 	// _ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -23,19 +22,64 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
 )
 
-func main() {
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
+var (
+	clusterName string
+	currentCtx  string
+	masterURL   string
+	token       string
+	user        string
+)
 
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+func getKubeConfig() (*ccApi.Config, error) {
+	clusters := map[string]*ccApi.Cluster{
+		clusterName: {
+			Server:                masterURL,
+			InsecureSkipTLSVerify: true,
+		},
+	}
+
+	authInfos := map[string]*ccApi.AuthInfo{
+		//user: {Token: "abaf6bc8-f80f-4767-86e0-cbf57b9cb1c7"},
+		user: {Token: token},
+	}
+
+	contexts := map[string]*ccApi.Context{
+		currentCtx: {
+			Cluster:  clusterName,
+			AuthInfo: user,
+		},
+	}
+
+	out := &ccApi.Config{
+		Clusters:       clusters,
+		AuthInfos:      authInfos,
+		Contexts:       contexts,
+		CurrentContext: currentCtx,
+	}
+
+	return out, nil
+}
+
+func init() {
+	flag.StringVar(&clusterName, "cluster", "sgx1", "name of cluster")
+	flag.StringVar(&currentCtx, "ctx", "sgx1", "context to use")
+	flag.StringVarP(&masterURL, "master", "m", "",
+		"url of master's API server, e.g. http://1.2.3.4:6443")
+	flag.StringVarP(&token, "token", "t", "", "NON-EMPTY token for authenticatoin")
+	flag.StringVarP(&user, "user", "u", "xml", "user name")
+}
+
+func main() {
+	flag.Parse()
+	if token == "" || masterURL == "" {
+		fmt.Println("token/masterURL mustn't be empty")
+		flag.PrintDefaults()
+		return
+	}
+
+	config, err := clientcmd.BuildConfigFromKubeconfigGetter(masterURL, getKubeConfig)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
 	// create the clientset
