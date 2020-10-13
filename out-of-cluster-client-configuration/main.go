@@ -64,7 +64,7 @@ func init() {
 	flag.StringVar(&clusterName, "cluster", "sgx1", "name of cluster")
 	flag.StringVar(&currentCtx, "ctx", "sgx1", "context to use")
 	flag.StringVarP(&masterURL, "master", "m", "",
-		"url of master's API server, e.g. http://1.2.3.4:6443")
+		"url of master's API server, e.g. https://1.2.3.4:6443, the 'https' but not 'http'")
 	flag.StringVarP(&token, "token", "t", "", "NON-EMPTY token for authenticatoin")
 	flag.StringVarP(&user, "user", "u", "xml", "user name")
 }
