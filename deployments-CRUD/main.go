@@ -39,10 +39,7 @@ func getKubeConfig() (*ccApi.Config, error) {
 		},
 	}
 
-	authInfos := map[string]*ccApi.AuthInfo{
-		//user: {Token: "abaf6bc8-f80f-4767-86e0-cbf57b9cb1c7"},
-		user: {Token: token},
-	}
+	authInfos := map[string]*ccApi.AuthInfo{user: {Token: token}}
 
 	contexts := map[string]*ccApi.Context{
 		currentCtx: {
